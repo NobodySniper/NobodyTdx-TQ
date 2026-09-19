@@ -1,0 +1,271 @@
+{% extends "_base.html" %}
+
+{% block extra_css %}
+<style>
+  .container { max-width: 1400px; margin: 0 auto; }
+
+  /* 表单卡片 */
+  .form-card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 18px; padding: 28px;
+    backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+    margin-bottom: 28px;
+  }
+  .form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 18px;
+  }
+  .form-group { display: flex; flex-direction: column; gap: 6px; }
+  .form-group label {
+    font-size: 12px; color: var(--muted); font-weight: 500;
+    letter-spacing: 1px; text-transform: uppercase;
+  }
+  .form-group input, .form-group select {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--border);
+    border-radius: 10px; padding: 10px 14px;
+    color: var(--text); font-size: 15px;
+    font-family: "SF Mono", "Consolas", monospace;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    outline: none;
+  }
+  .form-group input:focus, .form-group select:focus {
+    border-color: rgba(129,140,248,0.5);
+    box-shadow: 0 0 16px rgba(99,102,241,0.15);
+  }
+  .form-group select option { background: #1a1d28; color: var(--text); }
+
+  /* 按钮 */
+  .btn-run {
+    margin-top: 22px; padding: 13px 36px;
+    background: linear-gradient(120deg, #4f6df5, #7c3aed);
+    color: #fff; border: none; border-radius: 12px;
+    font-size: 16px; font-weight: 700; letter-spacing: 1px;
+    cursor: pointer; position: relative; overflow: hidden;
+    box-shadow: 0 6px 24px rgba(99,102,241,0.45);
+    transition: transform 0.2s, box-shadow 0.25s;
+  }
+  .btn-run::after {
+    content: ""; position: absolute; top: 0; left: -80%; width: 50%; height: 100%;
+    background: linear-gradient(100deg, transparent, rgba(255,255,255,0.35), transparent);
+    transform: skewX(-20deg); transition: left 0.5s ease;
+  }
+  .btn-run:hover { transform: translateY(-2px); box-shadow: 0 10px 34px rgba(124,58,237,0.55); }
+  .btn-run:hover::after { left: 130%; }
+
+  /* 打开报告文件夹按钮 */
+  .btn-folder {
+    margin-left: 12px; padding: 13px 24px;
+    background: rgba(255,255,255,0.05); color: var(--text);
+    border: 1px solid var(--border); border-radius: 12px;
+    font-size: 15px; font-weight: 600; cursor: pointer;
+    transition: border-color 0.2s, background 0.2s;
+    display: inline-flex; align-items: center; gap: 8px;
+  }
+  .btn-folder:hover {
+    border-color: rgba(129,140,248,0.4);
+    background: rgba(110,168,255,0.1);
+  }
+  .btn-folder svg { width: 16px; height: 16px; }
+  .btn-run:disabled { opacity: 0.5; cursor: not-allowed; }
+  .btn-run .spinner {
+    display: inline-block; width: 16px; height: 16px;
+    border: 2px solid rgba(255,255,255,0.3); border-top-color: #fff;
+    border-radius: 50%; animation: spin 0.8s linear infinite;
+    margin-right: 8px; vertical-align: middle;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* 日志区 */
+  .log-area {
+    background: rgba(0,0,0,0.3); border: 1px solid var(--border);
+    border-radius: 12px; padding: 16px; margin-top: 20px;
+    max-height: 200px; overflow-y: auto;
+    font-family: "SF Mono", "Consolas", monospace; font-size: 12px;
+    color: var(--muted); white-space: pre-wrap; display: none;
+  }
+  .log-area.visible { display: block; }
+
+  /* 报告 iframe */
+  .report-wrap {
+    margin-top: 28px; display: none;
+  }
+  .report-wrap.visible { display: block; }
+  .report-wrap iframe {
+    width: 100%; height: 1200px; border: none;
+    border-radius: 18px; box-shadow: 0 8px 40px rgba(0,0,0,0.5);
+  }
+</style>
+{% endblock %}
+
+{% block badge %}在线回测{% endblock %}
+
+{% block content %}
+  <!-- 表单 -->
+  <div class="form-card">
+    <div class="form-grid">
+      <div class="form-group">
+        <label>股票代码（6位数字）</label>
+        <input type="text" id="STOCK_CODE" value="{{ config.STOCK_CODE }}" placeholder="603955">
+      </div>
+      <div class="form-group">
+        <label>策略</label>
+        <select id="STRATEGY_KEY" onchange="loadStrategyParams()">
+          {% for s in strategies %}
+          <option value="{{ s }}" {% if s == config.STRATEGY_KEY %}selected{% endif %}>{{ s }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label>起始日期</label>
+        <input type="text" id="TARGET_START" value="{{ config.TARGET_START }}" placeholder="20240101">
+      </div>
+      <div class="form-group">
+        <label>结束日期（空=昨日）</label>
+        <input type="text" id="TARGET_END" value="{{ config.TARGET_END }}" placeholder="">
+      </div>
+      <div class="form-group">
+        <label>初始资金（元）</label>
+        <input type="number" id="INIT_CASH" value="{{ config.INIT_CASH }}">
+      </div>
+      <div class="form-group">
+        <label>佣金率（万1=0.0001）</label>
+        <input type="number" step="0.0001" id="COMMISSION_RATE" value="{{ config.COMMISSION_RATE }}">
+      </div>
+      <div class="form-group">
+        <label>印花税率（千1=0.001）</label>
+        <input type="number" step="0.0001" id="STAMP_TAX_RATE" value="{{ config.STAMP_TAX_RATE }}">
+      </div>
+    </div>
+
+    <!-- 策略参数（动态渲染） -->
+    <div class="form-grid" id="strategyParamsGrid" style="margin-top: 18px;"></div>
+
+    <button class="btn-run" id="btnRun" onclick="runBacktest()">
+      开始回测
+    </button>
+    <button class="btn-folder" onclick="openReports()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z"/></svg>
+      打开报告文件夹
+    </button>
+    <div class="log-area" id="logArea"></div>
+  </div>
+
+  <!-- 报告展示 -->
+  <div class="report-wrap" id="reportWrap">
+    <iframe id="reportFrame" src=""></iframe>
+  </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// 打开报告文件夹
+function openReports() {
+  fetch('/api/open_reports')
+    .then(r => r.json())
+    .then(res => {
+      if (!res.ok) alert('打开失败: ' + (res.msg || ''));
+    })
+    .catch(err => alert('请求失败: ' + err));
+}
+
+// 策略参数声明（从后端加载）
+var strategyParamDecls = [];
+
+// 页面加载时自动拉取当前策略的参数
+window.addEventListener('DOMContentLoaded', function() {
+  loadStrategyParams();
+});
+
+function loadStrategyParams() {
+  var key = document.getElementById('STRATEGY_KEY').value;
+  var grid = document.getElementById('strategyParamsGrid');
+
+  fetch('/api/strategy_params/' + key)
+    .then(r => r.json())
+    .then(res => {
+      strategyParamDecls = res.params || [];
+      grid.innerHTML = '';
+      strategyParamDecls.forEach(function(p) {
+        var group = document.createElement('div');
+        group.className = 'form-group';
+        var label = document.createElement('label');
+        label.textContent = p.label || p.key;
+        var input = document.createElement('input');
+        input.type = p.type === 'int' ? 'number' : 'text';
+        input.id = 'param_' + p.key;
+        input.value = p.default;
+        if (p.type === 'float') input.step = '0.0001';
+        group.appendChild(label);
+        group.appendChild(input);
+        grid.appendChild(group);
+      });
+    })
+    .catch(function() {
+      grid.innerHTML = '';
+    });
+}
+
+function runBacktest() {
+  var btn = document.getElementById('btnRun');
+  var logArea = document.getElementById('logArea');
+  var reportWrap = document.getElementById('reportWrap');
+  var reportFrame = document.getElementById('reportFrame');
+
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>回测中...';
+  logArea.classList.add('visible');
+  logArea.textContent = '正在提交参数...';
+  reportWrap.classList.remove('visible');
+
+  // 通用配置
+  var data = {
+    STOCK_CODE: document.getElementById('STOCK_CODE').value,
+    STRATEGY_KEY: document.getElementById('STRATEGY_KEY').value,
+    TARGET_START: document.getElementById('TARGET_START').value,
+    TARGET_END: document.getElementById('TARGET_END').value,
+    INIT_CASH: parseInt(document.getElementById('INIT_CASH').value),
+    COMMISSION_RATE: parseFloat(document.getElementById('COMMISSION_RATE').value),
+    STAMP_TAX_RATE: parseFloat(document.getElementById('STAMP_TAX_RATE').value),
+  };
+
+  // 动态收集策略参数
+  strategyParamDecls.forEach(function(p) {
+    var el = document.getElementById('param_' + p.key);
+    if (el) {
+      var val = el.value;
+      if (p.type === 'int') val = parseInt(val);
+      else if (p.type === 'float') val = parseFloat(val);
+      data[p.key] = val;
+    }
+  });
+
+  fetch('/api/run', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data)
+  })
+  .then(r => r.json())
+  .then(res => {
+    btn.disabled = false;
+    btn.innerHTML = '开始回测';
+    if (res.log) {
+      logArea.textContent = res.log;
+    }
+    if (res.ok) {
+      reportFrame.src = res.report_url;
+      reportWrap.classList.add('visible');
+      reportFrame.scrollIntoView({ behavior: 'smooth' });
+    } else {
+      logArea.textContent = (res.msg || '回测失败') + '\n\n' + (res.log || '');
+    }
+  })
+  .catch(err => {
+    btn.disabled = false;
+    btn.innerHTML = '开始回测';
+    logArea.textContent = '请求失败: ' + err;
+  });
+}
+</script>
+{% endblock %}

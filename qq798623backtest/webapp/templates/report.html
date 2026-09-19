@@ -1,0 +1,209 @@
+{% extends "_base.html" %}
+
+{% block title %}宁尚拙回测系统 · {{ stock_name }} ({{ stock_code }}) · {{ strategy_name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+  .container { max-width: 1120px; margin: 0 auto; }
+
+  /* 核心指标网格 */
+  .metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+    gap: 16px; margin-bottom: 30px;
+  }
+  .metric-card {
+    position: relative; overflow: hidden;
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 18px; padding: 22px 20px;
+    backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+    transition: transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+  }
+  .metric-card::before {
+    content: ""; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+    background: linear-gradient(90deg, transparent, rgba(129,140,248,0.7), transparent);
+    opacity: 0; transition: opacity 0.25s;
+  }
+  .metric-card:hover {
+    transform: translateY(-4px);
+    border-color: rgba(129,140,248,0.35);
+    box-shadow: 0 12px 40px rgba(79,110,255,0.15);
+  }
+  .metric-card:hover::before { opacity: 1; }
+  .metric-label {
+    font-size: 12px; color: var(--muted); margin-bottom: 10px;
+    font-weight: 500; letter-spacing: 1.5px; text-transform: uppercase;
+  }
+  .metric-value {
+    font-size: 28px; font-weight: 800;
+    font-family: "SF Mono", "JetBrains Mono", "Consolas", monospace;
+    letter-spacing: -0.5px;
+  }
+  .metric-value .unit { font-size: 14px; font-weight: 500; color: var(--muted); margin-left: 3px; }
+  .pos { color: var(--pos); text-shadow: 0 0 22px rgba(52,211,153,0.4); }
+  .neg { color: var(--neg); text-shadow: 0 0 22px rgba(251,113,133,0.4); }
+  .muted { color: var(--muted); }
+
+  /* 详细指标小网格 */
+  .detail-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 12px; margin-bottom: 40px;
+  }
+  .detail-card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 12px; padding: 15px 18px;
+    backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+    transition: border-color 0.25s ease, transform 0.25s ease;
+  }
+  .detail-card:hover { border-color: rgba(129,140,248,0.3); transform: translateY(-2px); }
+  .detail-label { font-size: 11px; color: var(--muted); margin-bottom: 5px; letter-spacing: 1px; }
+  .detail-value { font-size: 17px; font-weight: 700; font-family: "SF Mono", "JetBrains Mono", "Consolas", monospace; }
+
+  /* 股票信息行（副标题下方） */
+  .header-left .stock-info { color: var(--accent); font-size: 13px; margin-top: 4px; letter-spacing: 0.5px; }
+
+  /* 图表区 */
+  .chart-section { margin-bottom: 36px; }
+  .chart-title {
+    font-size: 18px; font-weight: 700; margin-bottom: 16px;
+    display: flex; align-items: center; gap: 10px; letter-spacing: 1px;
+  }
+  .chart-title::before {
+    content: ""; width: 4px; height: 18px; border-radius: 2px;
+    background: linear-gradient(180deg, #7dd3fc, #a855f7);
+    box-shadow: 0 0 10px rgba(129,140,248,0.6);
+  }
+  .chart-card {
+    background: #ffffff;
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 18px; padding: 20px;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.5), 0 0 30px rgba(99,102,241,0.08);
+    transition: box-shadow 0.3s ease, transform 0.3s ease;
+  }
+  .chart-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 14px 50px rgba(0,0,0,0.55), 0 0 44px rgba(99,102,241,0.16);
+  }
+  .chart-card img { width: 100%; height: auto; border-radius: 10px; display: block; }
+
+  /* 交易明细下载按钮 */
+  .download {
+    position: relative; overflow: hidden;
+    display: inline-flex; align-items: center; gap: 10px;
+    padding: 13px 28px; color: #fff;
+    background: linear-gradient(120deg, #4f6df5, #7c3aed);
+    border-radius: 12px; text-decoration: none; font-weight: 700; letter-spacing: 1px;
+    box-shadow: 0 6px 24px rgba(99,102,241,0.45);
+    transition: transform 0.2s ease, box-shadow 0.25s ease;
+  }
+  .download::after {
+    content: ""; position: absolute; top: 0; left: -80%; width: 50%; height: 100%;
+    background: linear-gradient(100deg, transparent, rgba(255,255,255,0.35), transparent);
+    transform: skewX(-20deg); transition: left 0.5s ease;
+  }
+  .download:hover { transform: translateY(-2px); box-shadow: 0 10px 34px rgba(124,58,237,0.55); }
+  .download:hover::after { left: 130%; }
+  .download svg { width: 16px; height: 16px; }
+
+  /* 交易明细表格 */
+  .trade-table {
+    width: 100%; border-collapse: collapse;
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 14px; overflow: hidden;
+    backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+    font-size: 13px;
+  }
+  .trade-table th {
+    padding: 12px 14px; text-align: left;
+    background: rgba(99,102,241,0.12); color: var(--accent);
+    font-weight: 600; letter-spacing: 0.5px; border-bottom: 1px solid var(--border);
+  }
+  .trade-table td {
+    padding: 10px 14px; border-bottom: 1px solid rgba(255,255,255,0.04);
+    font-family: "SF Mono", "JetBrains Mono", "Consolas", monospace;
+  }
+  .trade-table tr:last-child td { border-bottom: none; }
+  .trade-table tr:hover td { background: rgba(99,102,241,0.06); }
+  .trade-table td.pos { color: var(--pos); }
+  .trade-table td.neg { color: var(--neg); }
+  .table-wrap { overflow-x: auto; border-radius: 14px; }
+</style>
+{% endblock %}
+
+{% block stock_info %}
+  <div class="stock-info">{{ stock_name }} ({{ stock_code }}) · 日线 · 生成于 {{ gen_time }}</div>
+{% endblock %}
+
+{% block badge %}{{ strategy_name }}{% endblock %}
+
+{% block content %}
+  <!-- 核心指标 -->
+  <div class="metrics-grid">
+{{ core_str | safe }}
+  </div>
+
+  <!-- 详细指标 -->
+  <div class="detail-grid">
+{{ detail_str | safe }}
+  </div>
+
+  <!-- 资金曲线 -->
+  <div class="chart-section">
+    <div class="chart-title">资金曲线</div>
+    <div class="chart-card">
+      <img src="{{ equity_img }}" alt="资金曲线">
+    </div>
+  </div>
+
+  <!-- K 线走势图 -->
+  {{ kline_section | safe }}
+
+  <!-- 回撤曲线 -->
+  <div class="chart-section">
+    <div class="chart-title">回撤曲线</div>
+    <div class="chart-card">
+      <img src="{{ dd_img }}" alt="回撤曲线">
+    </div>
+  </div>
+
+  <!-- 月度热力图 -->
+  <div class="chart-section">
+    <div class="chart-title">月度收益热力图</div>
+    <div class="chart-card">
+      <img src="{{ heat_img }}" alt="月度收益热力图">
+    </div>
+  </div>
+
+  <!-- 交易明细 -->
+  <div class="chart-section">
+    <div class="chart-title">交易明细</div>
+    <div class="table-wrap">
+      <table class="trade-table">
+        <thead>
+          <tr>
+            <th>开仓日期</th><th>开仓价</th><th>平仓日期</th><th>平仓价</th>
+            <th>持仓数量</th><th>毛利盈亏</th><th>净盈亏</th><th>是否盈利</th>
+          </tr>
+        </thead>
+        <tbody>
+{{ trade_table_rows | safe }}
+        </tbody>
+      </table>
+    </div>
+    <div style="margin-top: 16px;">
+      <a href="{{ csv_name }}" class="download">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>
+        下载交易明细 CSV
+      </a>
+    </div>
+  </div>
+{% endblock %}
+
+{% block footer %}
+  <div class="footer">由 <span>宁尚拙回测系统</span> 生成 · 如需定制可联系作者QQ：798623</div>
+{% endblock %}
+
+{% block scripts %}
+{{ kline_script | safe }}
+{% endblock %}

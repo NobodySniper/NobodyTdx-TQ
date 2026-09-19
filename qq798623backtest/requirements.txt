@@ -1,0 +1,18 @@
+# 宁尚拙回测系统 V0.0.1
+# Python 3.12+ required
+
+# 回测引擎
+backtrader>=1.9.78
+
+# 数据处理
+pandas>=2.0
+numpy>=1.24
+
+# 图表生成（PNG）
+matplotlib>=3.5
+
+# Web 前端
+flask>=3.0
+
+# 通达信 TQ 数据接口（随通达信客户端安装，非 pip 包）
+# tqcenter — 由通达信量化交易终端提供，详见 https://help.tdx.com.cn/quant/

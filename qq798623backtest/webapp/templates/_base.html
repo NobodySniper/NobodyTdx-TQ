@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{% block title %}宁尚拙回测系统{% endblock %}</title>
+<style>
+  :root {
+    --bg: #05070f;
+    --card: rgba(255,255,255,0.035);
+    --border: rgba(255,255,255,0.08);
+    --text: #eef1f8;
+    --muted: #7c8194;
+    --accent: #6ea8ff;
+    --pos: #34d399;
+    --neg: #fb7185;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    padding: 40px 20px 60px;
+    overflow-x: hidden;
+    position: relative;
+  }
+  body::before {
+    content: ""; position: fixed; inset: 0; z-index: -2;
+    background:
+      radial-gradient(600px 400px at 15% 10%, rgba(99,102,241,0.22), transparent 60%),
+      radial-gradient(700px 500px at 85% 15%, rgba(56,189,248,0.16), transparent 60%),
+      radial-gradient(500px 500px at 50% 100%, rgba(168,85,247,0.12), transparent 60%);
+    animation: aurora 18s ease-in-out infinite alternate;
+  }
+  @keyframes aurora {
+    0%   { transform: translate(0, 0) scale(1); }
+    100% { transform: translate(-3%, 2%) scale(1.06); }
+  }
+  body::after {
+    content: ""; position: fixed; inset: 0; z-index: -1;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px);
+    background-size: 44px 44px;
+    mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, black, transparent 75%);
+    -webkit-mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, black, transparent 75%);
+  }
+  ::-webkit-scrollbar { width: 10px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 6px; }
+  ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.22); }
+
+  /* 入场动画 */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(18px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .header, .metrics-grid, .detail-grid, .chart-section, .footer {
+    animation: fadeUp 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+  .metric-card, .detail-card { animation: fadeUp 0.6s cubic-bezier(0.22, 1, 0.36, 1) both; }
+
+  /* 顶部标题区 */
+  .header {
+    display: flex; align-items: center; justify-content: space-between;
+    flex-wrap: wrap; gap: 16px; margin-bottom: 28px;
+  }
+  .header-left h1 {
+    font-size: 34px; font-weight: 800; letter-spacing: 1px;
+    background: linear-gradient(120deg, #7dd3fc, #818cf8 45%, #e879f9);
+    -webkit-background-clip: text; background-clip: text;
+    -webkit-text-fill-color: transparent;
+    filter: drop-shadow(0 0 22px rgba(129,140,248,0.35));
+  }
+  .header-left .subtitle { color: var(--muted); font-size: 14px; margin-top: 6px; line-height: 1.8; }
+
+  /* 版本号标签 */
+  .version {
+    font-size: 14px; font-weight: 600; vertical-align: middle;
+    background: rgba(129,140,248,0.15); color: #818cf8;
+    padding: 2px 10px; border-radius: 6px; margin-left: 6px;
+    border: 1px solid rgba(129,140,248,0.3);
+  }
+
+  /* 外部链接按钮 */
+  .links {
+    display: flex; gap: 12px; margin-bottom: 28px; flex-wrap: wrap;
+    align-items: center;
+  }
+  .link-btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 8px 18px; color: var(--accent);
+    background: rgba(110,168,255,0.08);
+    border: 1px solid rgba(110,168,255,0.2); border-radius: 10px;
+    text-decoration: none; font-size: 13px; font-weight: 600;
+    transition: transform 0.2s, border-color 0.2s, background 0.2s;
+  }
+  .link-btn:hover {
+    transform: translateY(-2px);
+    border-color: rgba(129,140,248,0.5);
+    background: rgba(110,168,255,0.15);
+  }
+  .slogan {
+    color: var(--muted); font-size: 13px; font-style: italic;
+    align-self: center; margin-left: 8px;
+  }
+  .badge {
+    display: inline-flex; align-items: center; gap: 8px; padding: 8px 18px;
+    background: rgba(110,168,255,0.1); color: var(--accent);
+    border: 1px solid rgba(110,168,255,0.35); border-radius: 999px;
+    font-size: 13px; font-weight: 600; letter-spacing: 1px;
+    box-shadow: 0 0 18px rgba(110,168,255,0.15) inset, 0 0 24px rgba(110,168,255,0.12);
+    backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+  }
+  .badge::before {
+    content: ""; width: 7px; height: 7px; border-radius: 50%;
+    background: var(--accent); box-shadow: 0 0 8px var(--accent);
+    animation: pulse 1.8s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50%      { opacity: 0.45; transform: scale(0.8); }
+  }
+
+  /* 二维码卡片（顶部右上角） */
+  .qrcode-card {
+    position: absolute;
+    top: 28px;
+    right: 20px;
+    display: flex;
+    gap: 14px;
+    padding: 14px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+    box-shadow: 0 8px 30px rgba(0,0,0,0.4);
+    animation: fadeUp 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+    z-index: 10;
+  }
+  .qrcode-card img {
+    width: 100px; height: 100px;
+    border-radius: 8px;
+    background: #fff;
+    padding: 4px;
+    flex-shrink: 0;
+  }
+  .qrcode-info {
+    display: flex; flex-direction: column; justify-content: center;
+    min-width: 140px;
+  }
+  .qrcode-title {
+    font-size: 15px; font-weight: 700;
+    background: linear-gradient(120deg, #7dd3fc, #818cf8);
+    -webkit-background-clip: text; background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 6px;
+  }
+  .qrcode-list {
+    list-style: none; padding: 0; margin: 0;
+    font-size: 12px; color: var(--muted);
+    line-height: 1.9;
+  }
+  .qrcode-list li {
+    padding-left: 12px; position: relative;
+  }
+  .qrcode-list li::before {
+    content: "·"; position: absolute; left: 0;
+    color: var(--accent); font-weight: 700;
+  }
+
+  .footer {
+    text-align: center; color: var(--muted); font-size: 12px;
+    margin-top: 48px; letter-spacing: 1px;
+  }
+  .footer span {
+    background: linear-gradient(90deg, #7dd3fc, #e879f9);
+    -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+    font-weight: 700;
+  }
+</style>
+{% block extra_css %}{% endblock %}
+</head>
+<body>
+<div class="container">
+
+  <!-- 二维码卡片（右上角） -->
+  <div class="qrcode-card">
+    <img src="/assets/img/feishu.png" alt="飞书二维码">
+    <div class="qrcode-info">
+      <div class="qrcode-title">添加飞书好友</div>
+      <ul class="qrcode-list">
+        <li>反馈意见</li>
+        <li>获取更新</li>
+        <li>进交流群</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="header">
+    <div class="header-left">
+      <h1>宁尚拙回测系统 <span class="version">V0.0.1</span></h1>
+      <div class="subtitle">
+        测试版 · 免费程序，目前仅提供单股回测，不断完善中<br>
+        欢迎提交意见和建议 · 如需定制请联系 QQ：798623
+      </div>
+      {% block stock_info %}{% endblock %}
+    </div>
+    <span class="badge">{% block badge %}{% endblock %}</span>
+  </div>
+
+  {% block links %}
+  <div class="links">
+    <a href="https://github.com/NobodySniper" target="_blank" class="link-btn">
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.79 5.625-5.46 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57C20.565 21.795 24 17.31 24 12c0-6.63-5.37-12-12-12z"/></svg>
+      GitHub
+    </a>
+    <a href="https://space.bilibili.com/3546688065112927" target="_blank" class="link-btn">
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M17.813 4.653h.854c1.51.054 2.769.578 3.773 1.574 1.004.995 1.524 2.249 1.56 3.76v3.841c.036 1.486-.03 2.723-.3 3.747-.243.99-.769 1.827-1.56 2.507-.769.683-1.762 1.046-2.973 1.096h-2.515c-1.743.054-3.682.084-5.811.09-2.18.004-4.27-.026-6.27-.09-1.686-.057-2.95-.504-3.802-1.347-.435-.43-.751-.945-.954-1.55-.202-.605-.317-1.302-.346-2.093-.054-1.486-.06-3.062-.018-4.728.043-1.665.157-3.09.346-4.27.194-1.169.704-2.114 1.534-2.834.83-.72 1.913-1.105 3.252-1.155h2.515c2.124-.055 4.404-.085 6.84-.091l2.515.091zm-5.194 4.622v6.503l5.476-3.246-5.476-3.257z"/></svg>
+      哔哩哔哩
+    </a>
+    <span class="slogan">宁静以虚心，虚心以尚拙，尚拙以胜巧</span>
+  </div>
+  {% endblock %}
+
+  {% block content %}{% endblock %}
+
+  {% block footer %}
+  <div class="footer">
+    宁尚拙回测系统 V0.0.1（测试版）· 免费程序，不断完善中<br>
+    如需定制请联系 QQ：798623 ·
+    <a href="https://github.com/NobodySniper" target="_blank" style="color: var(--accent); text-decoration: none;">GitHub</a> ·
+    <a href="https://space.bilibili.com/3546688065112927" target="_blank" style="color: var(--accent); text-decoration: none;">哔哩哔哩</a>
+  </div>
+  {% endblock %}
+
+</div>
+{% block scripts %}{% endblock %}
+</body>
+</html>
