@@ -124,4 +124,12 @@ qq798623backtest/
 
 ## License
 
-MIT
+本项目采用自定义许可证(**非 MIT,非 Apache,非 GPL**)。
+- 允许个人学习、研究与非商业分享;
+- **任何商业用途必须事先获得作者书面授权**;
+- 详见 [LICENSE](LICENSE)。
+
+署名:**宁尚拙**
+- 主页:https://github.com/NobodySniper
+- 哔哩哔哩:https://space.bilibili.com/3546688065112927
+- 联系:QQ 798623
