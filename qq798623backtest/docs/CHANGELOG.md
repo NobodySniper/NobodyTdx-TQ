@@ -4,6 +4,19 @@
 
 ---
 
+## [Unreleased]
+
+### 新增
+
+- **飞书交流群**：README 与 GitHub 主页宣传页加入飞书交流群二维码(`assets/img/feishu.png`),二维码失效可加 QQ 798623 拉群
+- **自定义许可证**：LICENSE 文件 + README License 段写明商业用途需授权,取代原 MIT
+
+### 变更
+
+- GitHub 主页宣传页(`docs/project_home.md`)页脚 License 标识由 MIT 改为自定义许可证说明
+
+---
+
 ## [V0.0.1] - 2026-09-18
 
 ### 新增

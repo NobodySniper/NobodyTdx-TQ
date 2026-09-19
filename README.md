@@ -120,6 +120,14 @@ qq798623backtest/
 - GitHub：https://github.com/NobodySniper
 - 哔哩哔哩：https://space.bilibili.com/3546688065112927
 
+## 飞书交流群
+
+欢迎加入宁尚拙回测系统飞书交流群,一起聊量化、提问题、分享策略。
+
+![飞书交流群二维码](qq798623backtest/assets/img/feishu.png)
+
+> 二维码失效请加 QQ 798623 拉你进群。
+
 如需定制策略或功能，请联系作者。
 
 ## License
